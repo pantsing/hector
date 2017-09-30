@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/xlvector/hector/util"
+	"io"
 )
 
 type CombinedFeature []string
@@ -34,6 +35,9 @@ func NewRawDataSet() *RawDataSet {
 }
 
 func (d *RawDataSet) AddSample(sample *RawSample) {
+	if sample == nil {
+		return
+	}
 	d.Samples = append(d.Samples, sample)
 }
 
@@ -146,53 +150,78 @@ func NewStreamingDataSet() *StreamingDataSet {
 }
 
 func (d *StreamingDataSet) AddSample(sample *Sample) {
+	if sample == nil {
+		return
+	}
 	d.Samples <- sample
 }
 
-func (d *StreamingDataSet) Load(path string, global_bias_feature_id int64) error {
-	for step := 0; step < 2; step++ {
-		file, err := os.Open(path)
-		defer file.Close()
+func (d *StreamingDataSet) Load(path string, globalBiasFeatureID int64) error {
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		log.Fatalln("load file fail: ", err)
+	}
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatalln("load file fail: ", err)
+			break
 		}
-		reader := bufio.NewReader(file)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				break
-			}
-			tks := strings.Split(strings.TrimSpace(line), "\t")
-			sample := Sample{Features: make([]Feature, 0, 20), Label: 0}
-			for i, tk := range tks {
-				if i == 0 {
-					label, _ := strconv.Atoi(tk)
-					sample.Label = label
-				} else {
-					kv := strings.Split(tk, ":")
-					feature_id, err := strconv.ParseInt(kv[0], 10, 64)
-					if err != nil {
-						log.Fatalln("wrong feature: ", kv[0])
-					}
-					feature_value := 1.0
-					if len(kv) > 1 {
-						feature_value, err = strconv.ParseFloat(kv[1], 64)
-						if err != nil {
-							log.Fatalln("wrong value: ", kv[1])
-						}
-					}
-					feature := Feature{feature_id, feature_value}
-					sample.Features = append(sample.Features, feature)
-				}
-			}
-			if global_bias_feature_id >= 0 {
-				sample.Features = append(sample.Features, Feature{global_bias_feature_id, 1.0})
-			}
-			d.AddSample(&sample)
-		}
+		sample := d.parser(line, globalBiasFeatureID)
+		d.AddSample(sample)
 	}
 	close(d.Samples)
 	return nil
+}
+
+func (d *StreamingDataSet) LoadFromStdIn(globalBiasFeatureID int64) error {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		line, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		sample := d.parser(line, globalBiasFeatureID)
+		d.AddSample(sample)
+	}
+	close(d.Samples)
+	return nil
+}
+
+func (d *StreamingDataSet) parser(line string, globalBiasFeatureID int64) (sample *Sample) {
+	tks := strings.Split(strings.TrimSpace(line), "\t")
+	sample = &Sample{Features: make([]Feature, 0, 20), Label: 0}
+	if globalBiasFeatureID >= 0 {
+		sample.Features = append(sample.Features, Feature{globalBiasFeatureID, 1.0})
+	}
+	for i, tk := range tks {
+		if i == 0 {
+			label, _ := strconv.Atoi(tk)
+			sample.Label = label
+		} else {
+			if strings.TrimSpace(tk) == "" {
+				continue
+			}
+			kv := strings.Split(tk, ":")
+			feature_id, err := strconv.ParseInt(kv[0], 10, 64)
+			if err != nil {
+				log.Println("wrong feature: ", tk)
+				return nil
+			}
+			feature_value := 1.0
+			if len(kv) > 1 {
+				feature_value, err = strconv.ParseFloat(kv[1], 64)
+				if err != nil {
+					log.Println("wrong value: ", tk)
+					return nil
+				}
+			}
+			feature := Feature{feature_id, feature_value}
+			sample.Features = append(sample.Features, feature)
+		}
+	}
+	return sample
 }
 
 /* DataSet */
@@ -238,8 +267,11 @@ func (d *DataSet) Load(path string, global_bias_feature_id int64) error {
 	}()
 
 	for line := range ch {
-		tks := strings.Split(line, "\t")
+		tks := strings.Split(strings.TrimSpace(line), "\t")
 		sample := Sample{Features: make([]Feature, 0, 20), Label: 0}
+		if global_bias_feature_id >= 0 {
+			sample.Features = append(sample.Features, Feature{global_bias_feature_id, 1.0})
+		}
 		for i, tk := range tks {
 			if i == 0 {
 				label, _ := strconv.Atoi(tk)
@@ -266,9 +298,9 @@ func (d *DataSet) Load(path string, global_bias_feature_id int64) error {
 				sample.Features = append(sample.Features, feature)
 			}
 		}
-		if global_bias_feature_id >= 0 {
-			sample.Features = append(sample.Features, Feature{global_bias_feature_id, 1.0})
-		}
+		//if global_bias_feature_id >= 0 {
+		//	sample.Features = append(sample.Features, Feature{global_bias_feature_id, 1.0})
+		//}
 		d.AddSample(&sample)
 	}
 	f, _ := os.Create("features.tsv")

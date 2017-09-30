@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
-
-	"github.com/xlvector/hector"
+	"github.com/pantsing/log"
+	"github.com/pantsing/hector"
+	"github.com/pantsing/hector/eval"
 )
 
 func main() {
@@ -15,15 +15,16 @@ func main() {
 	classifier := hector.GetClassifier(method)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if action == "" {
-		auc, _, _ := hector.AlgorithmRun(classifier, train, test, pred, params)
-		fmt.Println("AUC:")
-		fmt.Println(auc)
+		auc, predictions, _ := hector.AlgorithmRun(classifier, train, test, pred, params)
+		log.Printf("AUC: %.20g\n", auc)
+		er := eval.ErrorRate(predictions)
+		log.Printf("ER: %.20g\n", er)
 	} else if action == "train" {
 		hector.AlgorithmTrain(classifier, train, params)
-
 	} else if action == "test" {
-		auc, _, _ := hector.AlgorithmTest(classifier, test, pred, params)
-		fmt.Println("AUC:")
-		fmt.Println(auc)
+		auc, predictions, _ := hector.AlgorithmTest(classifier, test, pred, params)
+		log.Printf("AUC: %.20g\n", auc)
+		er := eval.ErrorRate(predictions)
+		log.Printf("ER: %.20g\n", er)
 	}
 }

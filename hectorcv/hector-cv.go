@@ -10,6 +10,7 @@ import (
 
 	"github.com/xlvector/hector"
 	"github.com/xlvector/hector/core"
+	"github.com/pantsing/hector/eval"
 )
 
 func SplitFile(dataset *core.DataSet, total, part int) (*core.DataSet, *core.DataSet) {
@@ -49,15 +50,19 @@ func main() {
 	}
 
 	average_auc := 0.0
+	average_er := 0.0
 	for part := 0; part < total; part++ {
 		train, test := SplitFile(dataset, total, part)
 		classifier := hector.GetClassifier(method)
 		classifier.Init(params)
-		auc, _ := hector.AlgorithmRunOnDataSet(classifier, train, test, "", params)
-		fmt.Println("AUC:")
-		fmt.Println(auc)
+		auc, predictions := hector.AlgorithmRunOnDataSet(classifier, train, test, "", params)
+		fmt.Printf("AUC: %.20g\n", auc)
 		average_auc += auc
+		er :=eval.ErrorRate(predictions)
+		fmt.Printf("ER: %.20g\n", er)
+		average_er += er
 		classifier = nil
 	}
 	fmt.Println(average_auc / float64(total))
+	fmt.Println(average_er / float64(total))
 }

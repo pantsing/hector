@@ -16,6 +16,7 @@ import (
 	"github.com/xlvector/hector/lr"
 	"github.com/xlvector/hector/sa"
 	"github.com/xlvector/hector/svm"
+	"github.com/pantsing/log"
 )
 
 func GetMutliClassClassifier(method string) algo.MultiClassClassifier {
@@ -164,6 +165,11 @@ func PrepareParams() (string, string, string, string, map[string]string) {
 	params["dt-sample-ratio"] = *dt_sample_ratio
 	params["dim"] = *dim
 
-	fmt.Println(params)
+	if params["action"] != "pred" {
+		log.Println(*train_path)
+		log.Println(*test_path)
+		log.Println(*method)
+		log.Println(params)
+	}
 	return *train_path, *test_path, *pred_path, *method, params
 }
