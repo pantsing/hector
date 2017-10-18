@@ -1,7 +1,7 @@
 hector
 ======
 
-Golang machine learning lib. Currently, it can be used to solve binary classification problems.
+Golang machine learning lib. It's forked form github.com/xlvector/hector, but has been rebuild for clearer CLI commands and algorithms scalability.
 
 # Supported Algorithms
 
@@ -21,15 +21,12 @@ Hector support libsvm-like data format. Following is an sample dataset
 
 # How to Run
 
-## Run as tools
+## Install
 
-hector-cv.go will help you test one algorithm by cross validation in some dataset, you can run it by following steps:
+	go get github.com/pantsing/hector
+	hector --help
 
-	go get github.com/xlvector/hector
-	go install github.com/xlvector/hector/hectorcv
-	hectorcv --method [Method] --train [Data Path] --cv 10
-
-Here, Method include
+Here, supported algorithms include
 
 1. lr : logistic regression with SGD and L2 regularization.
 2. ftrl : FTRL-proximal logistic regreesion with L1 regularization. Please review this paper for more details "Ad Click Prediction: a View from the Trenches".
@@ -44,20 +41,6 @@ Here, Method include
 11. svm : svm optimizaed by SMO (current, its linear svm)
 12. l1vm : vector machine with L1 regularization by RBF kernel
 13. knn : k-nearest neighbor classification
-
-hector-run.go will help you train one algorithm on train dataset and test it on test dataset, you can run it by following steps:
-
-	cd src
-	go build hector-run.go
-	./hector-run --method [Method] --train [Data Path] --test [Data Path]
-
-Above methods will direct train algorithm on train dataset and then test on test dataset. If you want to train algorithm and get the model file, you can run it by following steps:
-
-	./hector-run --method [Method] --action train --train [Data Path] --model [Model Path]
-
-Then, you can use model file to test any test dataset:
-
-	./hector-run --method [Method] --action test --test [Data Path] --model [Model Path]
 
 # Benchmark
 

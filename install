@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+GOFLAGS='-ldflags="-s -w"'
+arch=$(go env GOARCH)
+version=$(awk '/const Binary/ {print $NF}' < $DIR/internal/version/binary.go | sed 's/"//g')
+goversion=$(go version | awk '{print $3}')
+
+for os in darwin linux; do
+    echo "... building v$version for $os/$arch"
+    BUILD=$(mktemp -d -t hector)
+    TARGET="hector-$version.$os-$arch.$goversion"
+    GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
+        make DESTDIR=$BUILD PREFIX=/$TARGET GOFLAGS="$GOFLAGS" install
+    pushd $BUILD
+    if [ "$os" == "linux" ]; then
+        cp -r $TARGET/bin $DIR/dist/
+    fi
+    sudo chown -R 0:0 $TARGET
+    tar czvf $TARGET.tar.gz $TARGET
+    mv $TARGET.tar.gz $DIR/dist
+    popd
+    make clean
+    sudo rm -r $BUILD
+done
