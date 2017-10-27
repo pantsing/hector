@@ -352,7 +352,7 @@ func (d *DataSet) CVSplit(cvTotal, cvPart int) (trainSet *DataSet, testSet *Data
 		if i%cvTotal == cvPart {
 			testSet.AddSample(sample)
 		} else {
-			testSet.AddSample(sample)
+			trainSet.AddSample(sample)
 		}
 	}
 	return

@@ -1,6 +1,7 @@
 package classifier
 
 import (
+	"fmt"
 	"github.com/pantsing/hector/internal/algorithms/classifier/ann"
 	"github.com/pantsing/hector/internal/algorithms/classifier/common"
 	"github.com/pantsing/hector/internal/algorithms/classifier/dt"
@@ -155,6 +156,11 @@ func AlgorithmRun(ctx *cli.Context) (err error) {
 			log.Infof("ER: %.20g\n", er)
 		}
 	} else {
+		if trainSet == nil || len(trainSet.Samples) == 0 {
+			err := fmt.Errorf("No sample in train set for cross validation.")
+			log.Error(err)
+			return err
+		}
 		average_auc := 0.0
 		average_er := 0.0
 		for part := 0; part < cv; part++ {
